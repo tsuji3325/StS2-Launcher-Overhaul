@@ -41,7 +41,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p work/original work/patched
-          unzip -p upstream.apk assets/dotnet_bcl/STS2Mobile.dll > work/original/STS2Mobile.dll
+          unzip -q upstream.apk 'assets/dotnet_bcl/*' -d work/apk-extract
+          cp work/apk-extract/assets/dotnet_bcl/* work/original/
           test -s work/original/STS2Mobile.dll
 
           dotnet run --project tools/CustomApkPatch/CustomApkPatch.csproj -c Release -- \
