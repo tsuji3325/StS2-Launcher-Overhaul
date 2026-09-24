@@ -1,10 +1,11 @@
 name: Build JP Low Performance APK
 
 on:
-  push:
+  pull_request:
     branches:
-      - jp-low-performance
+      - main
     paths:
+      - "src/STS2Mobile/**"
       - "tools/CustomApkPatch/**"
       - ".github/workflows/build-jp-lowperf-apk.yml"
   workflow_dispatch:
@@ -63,9 +64,9 @@ jobs:
             zip -q -u ../../StS2Launcher-jp-lowperf-unsigned.apk assets/dotnet_bcl/STS2Mobile.dll
           )
 
-          unzip -p StS2Launcher-jp-lowperf-unsigned.apk assets/dotnet_bcl/STS2Mobile.dll \
-            | sha256sum
-          sha256sum work/patched/STS2Mobile.dll
+          ORIGINAL_HASH="$(sha256sum work/patched/STS2Mobile.dll | cut -d' ' -f1)"
+          APK_HASH="$(unzip -p StS2Launcher-jp-lowperf-unsigned.apk assets/dotnet_bcl/STS2Mobile.dll | sha256sum | cut -d' ' -f1)"
+          test "$ORIGINAL_HASH" = "$APK_HASH"
 
       - name: Sign APK
         shell: bash
