@@ -15,8 +15,9 @@ internal sealed class StyledLineEdit : LineEdit
     )
     {
         _keyboardType = keyboardType;
-        PlaceholderText = placeholder;
-        AccessibilityName = placeholder;
+        var localizedPlaceholder = STS2Mobile.Launcher.LauncherJapanese.Text(placeholder);
+        PlaceholderText = localizedPlaceholder;
+        AccessibilityName = localizedPlaceholder;
         Secret = secret;
         CustomMinimumSize = new Vector2(
             0,
