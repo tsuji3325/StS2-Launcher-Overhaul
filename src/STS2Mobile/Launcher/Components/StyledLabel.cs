@@ -11,7 +11,7 @@ internal sealed class StyledLabel : Label
         HorizontalAlignment align = HorizontalAlignment.Center
     )
     {
-        Text = text;
+        Text = STS2Mobile.Launcher.LauncherJapanese.Text(text);
         HorizontalAlignment = align;
         AddThemeFontSizeOverride(
             LauncherComponentTheme.FontSize,

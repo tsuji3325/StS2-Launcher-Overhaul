@@ -3,6 +3,7 @@ using System.IO;
 using Godot;
 using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Settings;
+using STS2Mobile.Launcher;
 
 namespace STS2Mobile.Patches;
 
@@ -10,11 +11,13 @@ internal static partial class SettingsPatches
 {
     private static void InitSettingsDataPostfix()
     {
-        if (_mobileDefaultsChecked)
-            return;
-        _mobileDefaultsChecked = true;
+        if (!_mobileDefaultsChecked)
+        {
+            _mobileDefaultsChecked = true;
+            ApplyMobileDefaultsIfNeeded();
+        }
 
-        ApplyMobileDefaultsIfNeeded();
+        LauncherPerformanceSettings.ApplyAfterSettingsLoaded();
     }
 
     private static void ApplyMobileDefaultsIfNeeded()

@@ -45,12 +45,16 @@ internal sealed partial class DownloadSection
         _progressBar.Visible = true;
         _progressBar.Value = pct;
         _progressLabel.Visible = true;
-        _progressLabel.Text = _compact ? CompactDownloadProgressText(text) : text;
+        _progressLabel.Text = STS2Mobile.Launcher.LauncherJapanese.Text(
+            _compact ? CompactDownloadProgressText(text) : text
+        );
         if (_compact)
         {
             SetCompactDownloadButtonText(
                 _downloadButton,
-                CompactDownloadProgressButtonText(text)
+                STS2Mobile.Launcher.LauncherJapanese.Text(
+                    CompactDownloadProgressButtonText(text)
+                )
             );
         }
         _branchDropdown.Disabled = true;

@@ -12,11 +12,11 @@ internal sealed partial class LauncherView
 
     internal void SetStatus(string text, LauncherStatusSeverity severity)
     {
-        var label = LauncherPortalStatusFormatter.LabelFor(severity);
+        var label = LauncherJapanese.Text(LauncherPortalStatusFormatter.LabelFor(severity));
         var color = LauncherPortalStatusFormatter.ColorFor(severity);
-        var fullMessage = LauncherPortalStatusFormatter.MessageFor(text);
+        var fullMessage = LauncherJapanese.Text(LauncherPortalStatusFormatter.MessageFor(text));
         var message = _profile.Compact
-            ? LauncherPortalStatusFormatter.CompactMessageFor(text)
+            ? LauncherJapanese.Text(LauncherPortalStatusFormatter.CompactMessageFor(text))
             : fullMessage;
         _compactStatusShortMessage = message;
         _compactStatusFullMessage = fullMessage;
@@ -81,14 +81,18 @@ internal sealed partial class LauncherView
         _statusLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _statusLabel.ClipText = false;
         _compactStatusDetailsButton.Visible = hasFullDetails;
-        _compactStatusDetailsButton.Text = expanded ? "Hide details" : "Show details";
+        _compactStatusDetailsButton.Text = LauncherJapanese.Text(
+            expanded ? "Hide details" : "Show details"
+        );
         _compactStatusDetailsButton.AccessibilityName = _compactStatusDetailsButton.Text;
         _compactStatusDetailsButton.Disabled = !hasFullDetails;
         _compactStatusDetailsButton.MouseDefaultCursorShape = hasFullDetails
             ? Control.CursorShape.PointingHand
             : Control.CursorShape.Arrow;
         _compactStatusDetailsCueLabel.Visible = false;
-        _compactStatusDetailsCueLabel.Text = expanded ? "Hide" : "Details";
+        _compactStatusDetailsCueLabel.Text = LauncherJapanese.Text(
+            expanded ? "Hide" : "Details"
+        );
     }
 
     private static bool ShouldAutoExpandCompactStatusDetails(LauncherStatusSeverity severity)

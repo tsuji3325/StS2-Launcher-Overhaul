@@ -11,10 +11,11 @@ internal sealed class StyledButton : Button
         int height = LauncherComponentTheme.ButtonDefaultHeight
     )
     {
-        Text = text;
+        var localizedText = STS2Mobile.Launcher.LauncherJapanese.Text(text);
+        Text = localizedText;
         MouseDefaultCursorShape = CursorShape.PointingHand;
         FocusMode = FocusModeEnum.All;
-        AccessibilityName = text;
+        AccessibilityName = localizedText;
         ClipText = true;
         TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         CustomMinimumSize = new Vector2(0, LauncherComponentTheme.ScaleInt(scale, height));

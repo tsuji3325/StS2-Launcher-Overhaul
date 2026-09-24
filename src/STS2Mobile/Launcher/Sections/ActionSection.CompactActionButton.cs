@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using STS2Mobile.Launcher;
 
 namespace STS2Mobile.Launcher.Sections;
 
@@ -42,7 +43,7 @@ internal sealed partial class ActionSection
     private void SetCompactActionButtonText(Button button, string text)
         => CompactButtonDetailLabels.Apply(
             button,
-            text,
+            LauncherJapanese.Text(text),
             _scale,
             _compact,
             CompactActionButtonLabels
