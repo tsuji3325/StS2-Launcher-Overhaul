@@ -1,6 +1,9 @@
 name: Build JP Low Performance APK
 
 on:
+  push:
+    branches:
+      - jp-low-performance
   pull_request:
     branches:
       - main
