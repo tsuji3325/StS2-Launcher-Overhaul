@@ -116,15 +116,18 @@ using var assembly = AssemblyDefinition.ReadAssembly(input, new ReaderParameters
 var translated = 0;
 MethodReference? maxFpsSetter = null;
 MethodDefinition? settingsPostfix = null;
+MethodDefinition? applyMobileDefaults = null;
 
 foreach (var type in AllTypes(assembly.MainModule.Types))
 {
     foreach (var method in type.Methods)
     {
-        if (type.FullName == "STS2Mobile.Patches.SettingsPatches"
-            && method.Name == "InitSettingsDataPostfix")
+        if (type.FullName == "STS2Mobile.Patches.SettingsPatches")
         {
-            settingsPostfix = method;
+            if (method.Name == "InitSettingsDataPostfix")
+                settingsPostfix = method;
+            else if (method.Name == "ApplyMobileDefaultsIfNeeded")
+                applyMobileDefaults = method;
         }
 
         if (!method.HasBody)
@@ -153,8 +156,31 @@ foreach (var type in AllTypes(assembly.MainModule.Types))
 if (settingsPostfix is null || !settingsPostfix.HasBody)
     throw new InvalidOperationException("SettingsPatches.InitSettingsDataPostfix was not found.");
 
+if (applyMobileDefaults is null || !applyMobileDefaults.HasBody)
+    throw new InvalidOperationException("SettingsPatches.ApplyMobileDefaultsIfNeeded was not found.");
+
 if (maxFpsSetter is null)
     throw new InvalidOperationException("Godot.Engine.MaxFps setter reference was not found.");
+
+var vsyncPatched = false;
+for (var i = 1; i < applyMobileDefaults.Body.Instructions.Count; i++)
+{
+    var instruction = applyMobileDefaults.Body.Instructions[i];
+    if (instruction.Operand is not MethodReference mr
+        || mr.Name != "set_VSync")
+    {
+        continue;
+    }
+
+    var previous = applyMobileDefaults.Body.Instructions[i - 1];
+    previous.OpCode = OpCodes.Ldc_I4_1;
+    previous.Operand = null;
+    vsyncPatched = true;
+    break;
+}
+
+if (!vsyncPatched)
+    throw new InvalidOperationException("Could not patch the first-launch VSync default.");
 
 var il = settingsPostfix.Body.GetILProcessor();
 var first = settingsPostfix.Body.Instructions[0];
@@ -166,6 +192,7 @@ assembly.Write(output);
 
 Console.WriteLine($"Translated string literals: {translated}");
 Console.WriteLine("Injected Android launcher/game 30 FPS cap.");
+Console.WriteLine("Changed first-launch mobile VSync default to Off.");
 return 0;
 
 static IEnumerable<TypeDefinition> AllTypes(IEnumerable<TypeDefinition> roots)
