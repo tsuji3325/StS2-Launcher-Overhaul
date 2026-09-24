@@ -72,6 +72,70 @@ jobs:
           APK_HASH="$(unzip -p StS2Launcher-jp-lowperf-unsigned.apk assets/dotnet_bcl/STS2Mobile.dll | sha256sum | cut -d' ' -f1)"
           test "$ORIGINAL_HASH" = "$APK_HASH"
 
+      - name: Repackage with side-by-side application id
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          AAPT="$BUILD_TOOLS/aapt"
+          test -x "$AAPT"
+
+          OLD_PACKAGE="$("$AAPT" dump badging StS2Launcher-jp-lowperf-unsigned.apk | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -1)"
+          test -n "$OLD_PACKAGE"
+
+          export OLD_PACKAGE
+          export NEW_PACKAGE="$(python3 - <<'PY'
+import os
+old = os.environ["OLD_PACKAGE"]
+prefix = "com.sts2launcher.jp."
+if len(old) <= len(prefix):
+    raise SystemExit(f"Original package id is unexpectedly short: {old}")
+print(prefix + ("x" * (len(old) - len(prefix))))
+PY
+)"
+          echo "Repackaging application id: $OLD_PACKAGE -> $NEW_PACKAGE"
+
+          mkdir -p work/manifest
+          unzip -p StS2Launcher-jp-lowperf-unsigned.apk AndroidManifest.xml > work/manifest/AndroidManifest.xml
+
+          python3 - <<'PY'
+import os
+from pathlib import Path
+
+old = os.environ["OLD_PACKAGE"]
+new = os.environ["NEW_PACKAGE"]
+if len(old) != len(new):
+    raise SystemExit("Replacement package id must have identical length.")
+
+path = Path("work/manifest/AndroidManifest.xml")
+data = path.read_bytes()
+total = 0
+
+for old_bytes, new_bytes in (
+    (old.encode("utf-8"), new.encode("utf-8")),
+    (old.encode("utf-16le"), new.encode("utf-16le")),
+):
+    count = data.count(old_bytes)
+    if count:
+        data = data.replace(old_bytes, new_bytes)
+        total += count
+
+if total == 0:
+    raise SystemExit(f"Package id {old!r} was not found in AndroidManifest.xml.")
+
+path.write_bytes(data)
+print(f"Patched {total} manifest package-id occurrence(s).")
+PY
+
+          (
+            cd work/manifest
+            zip -q -u ../../StS2Launcher-jp-lowperf-unsigned.apk AndroidManifest.xml
+          )
+
+          NEW_BADGING="$("$AAPT" dump badging StS2Launcher-jp-lowperf-unsigned.apk | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -1)"
+          echo "Resulting application id: $NEW_BADGING"
+          test "$NEW_BADGING" = "$NEW_PACKAGE"
+
       - name: Sign APK
         shell: bash
         run: |
