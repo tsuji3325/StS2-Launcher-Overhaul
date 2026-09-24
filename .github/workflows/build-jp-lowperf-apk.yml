@@ -82,50 +82,42 @@ jobs:
 
           OLD_PACKAGE="$("$AAPT" dump badging StS2Launcher-jp-lowperf-unsigned.apk | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -1)"
           test -n "$OLD_PACKAGE"
-
           export OLD_PACKAGE
+
           export NEW_PACKAGE="$(python3 - <<'PY'
-import os
-old = os.environ["OLD_PACKAGE"]
-prefix = "com.sts2launcher.jp."
-if len(old) <= len(prefix):
-    raise SystemExit(f"Original package id is unexpectedly short: {old}")
-print(prefix + ("x" * (len(old) - len(prefix))))
-PY
-)"
+          import os
+          old = os.environ['OLD_PACKAGE']
+          prefix = 'com.sts2launcher.jp.'
+          if len(old) <= len(prefix):
+              raise SystemExit('Original package id is too short')
+          print(prefix + ('x' * (len(old) - len(prefix))))
+          PY
+          )"
           echo "Repackaging application id: $OLD_PACKAGE -> $NEW_PACKAGE"
 
           mkdir -p work/manifest
           unzip -p StS2Launcher-jp-lowperf-unsigned.apk AndroidManifest.xml > work/manifest/AndroidManifest.xml
 
           python3 - <<'PY'
-import os
-from pathlib import Path
-
-old = os.environ["OLD_PACKAGE"]
-new = os.environ["NEW_PACKAGE"]
-if len(old) != len(new):
-    raise SystemExit("Replacement package id must have identical length.")
-
-path = Path("work/manifest/AndroidManifest.xml")
-data = path.read_bytes()
-total = 0
-
-for old_bytes, new_bytes in (
-    (old.encode("utf-8"), new.encode("utf-8")),
-    (old.encode("utf-16le"), new.encode("utf-16le")),
-):
-    count = data.count(old_bytes)
-    if count:
-        data = data.replace(old_bytes, new_bytes)
-        total += count
-
-if total == 0:
-    raise SystemExit(f"Package id {old!r} was not found in AndroidManifest.xml.")
-
-path.write_bytes(data)
-print(f"Patched {total} manifest package-id occurrence(s).")
-PY
+          import os
+          from pathlib import Path
+          old = os.environ['OLD_PACKAGE']
+          new = os.environ['NEW_PACKAGE']
+          if len(old) != len(new):
+              raise SystemExit('Replacement package id length mismatch')
+          p = Path('work/manifest/AndroidManifest.xml')
+          data = p.read_bytes()
+          total = 0
+          for old_bytes, new_bytes in ((old.encode('utf-8'), new.encode('utf-8')), (old.encode('utf-16le'), new.encode('utf-16le'))):
+              count = data.count(old_bytes)
+              if count:
+                  data = data.replace(old_bytes, new_bytes)
+                  total += count
+          if total == 0:
+              raise SystemExit('Package id not found in AndroidManifest.xml')
+          p.write_bytes(data)
+          print(f'Patched {total} manifest package-id occurrence(s).')
+          PY
 
           (
             cd work/manifest
@@ -135,7 +127,6 @@ PY
           NEW_BADGING="$("$AAPT" dump badging StS2Launcher-jp-lowperf-unsigned.apk | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -1)"
           echo "Resulting application id: $NEW_BADGING"
           test "$NEW_BADGING" = "$NEW_PACKAGE"
-
       - name: Sign APK
         shell: bash
         run: |
