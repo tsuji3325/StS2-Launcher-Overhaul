@@ -107,10 +107,14 @@ var translations = new Dictionary<string, string>(StringComparer.Ordinal)
         "選択中バージョンのゲームファイルだけを再取得します。セーブや他のバージョンは残ります。",
 };
 
+var resolver = new DefaultAssemblyResolver();
+resolver.AddSearchDirectory(Path.GetDirectoryName(Path.GetFullPath(input))!);
+
 using var assembly = AssemblyDefinition.ReadAssembly(input, new ReaderParameters
 {
     ReadWrite = false,
     InMemory = true,
+    AssemblyResolver = resolver,
 });
 
 var translated = 0;
