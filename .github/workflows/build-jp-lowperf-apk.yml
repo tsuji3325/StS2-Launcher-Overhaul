@@ -1,0 +1,116 @@
+name: Build JP Low Performance APK
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/STS2Mobile/**"
+      - "tools/CustomApkPatch/**"
+      - ".github/workflows/build-jp-lowperf-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Download upstream APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --retry-delay 2 \
+            -o upstream.apk \
+            "https://github.com/SocialHummingbird/StS2-Launcher-Overhaul/releases/download/v0.2.432/StS2Launcher-v0.2.432-arm64-v8a.apk"
+          test -s upstream.apk
+
+      - name: Extract and patch STS2Mobile.dll
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work/original work/patched
+          unzip -p upstream.apk assets/dotnet_bcl/STS2Mobile.dll > work/original/STS2Mobile.dll
+          test -s work/original/STS2Mobile.dll
+
+          dotnet run --project tools/CustomApkPatch/CustomApkPatch.csproj -c Release -- \
+            work/original/STS2Mobile.dll \
+            work/patched/STS2Mobile.dll
+
+          test -s work/patched/STS2Mobile.dll
+
+      - name: Replace managed launcher assembly
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp upstream.apk StS2Launcher-jp-lowperf-unsigned.apk
+          zip -d StS2Launcher-jp-lowperf-unsigned.apk 'META-INF/*' || true
+
+          mkdir -p work/apk/assets/dotnet_bcl
+          cp work/patched/STS2Mobile.dll work/apk/assets/dotnet_bcl/STS2Mobile.dll
+          (
+            cd work/apk
+            zip -q -u ../../StS2Launcher-jp-lowperf-unsigned.apk assets/dotnet_bcl/STS2Mobile.dll
+          )
+
+          ORIGINAL_HASH="$(sha256sum work/patched/STS2Mobile.dll | cut -d' ' -f1)"
+          APK_HASH="$(unzip -p StS2Launcher-jp-lowperf-unsigned.apk assets/dotnet_bcl/STS2Mobile.dll | sha256sum | cut -d' ' -f1)"
+          test "$ORIGINAL_HASH" = "$APK_HASH"
+
+      - name: Sign APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          ZIPALIGN="$BUILD_TOOLS/zipalign"
+          APKSIGNER="$BUILD_TOOLS/apksigner"
+
+          test -x "$ZIPALIGN"
+          test -x "$APKSIGNER"
+
+          keytool -genkeypair \
+            -keystore custom.jks \
+            -storepass android \
+            -keypass android \
+            -alias sts2custom \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=StS2 JP LowPerf, O=Local Build, C=JP"
+
+          "$ZIPALIGN" -p -f 4 \
+            StS2Launcher-jp-lowperf-unsigned.apk \
+            StS2Launcher-jp-lowperf-aligned.apk
+
+          "$APKSIGNER" sign \
+            --ks custom.jks \
+            --ks-key-alias sts2custom \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --out StS2Launcher-jp-lowperf-arm64-v8a.apk \
+            StS2Launcher-jp-lowperf-aligned.apk
+
+          "$APKSIGNER" verify --verbose --print-certs StS2Launcher-jp-lowperf-arm64-v8a.apk
+          sha256sum StS2Launcher-jp-lowperf-arm64-v8a.apk \
+            | tee StS2Launcher-jp-lowperf-arm64-v8a.apk.sha256
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: StS2Launcher-jp-lowperf-arm64-v8a
+          path: |
+            StS2Launcher-jp-lowperf-arm64-v8a.apk
+            StS2Launcher-jp-lowperf-arm64-v8a.apk.sha256
+          if-no-files-found: error
+          retention-days: 7
