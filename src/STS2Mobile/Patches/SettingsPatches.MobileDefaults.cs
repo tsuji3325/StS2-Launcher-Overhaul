@@ -17,6 +17,9 @@ internal static partial class SettingsPatches
             ApplyMobileDefaultsIfNeeded();
         }
 
+        if (OperatingSystem.IsAndroid())
+            Input.EmulateMouseFromTouch = true;
+
         LauncherPerformanceSettings.ApplyAfterSettingsLoaded();
     }
 
