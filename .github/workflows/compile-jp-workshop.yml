@@ -6,6 +6,7 @@ on:
       - workshop-link-fallback
     paths:
       - "src/STS2Mobile/**"
+      - "tests/WorkshopLinkTests/**"
       - ".github/workflows/compile-jp-workshop.yml"
   workflow_dispatch:
 
@@ -35,6 +36,8 @@ jobs:
           done
       - name: Build managed assembly
         run: dotnet publish src/STS2Mobile/STS2Mobile.csproj -c Release --no-self-contained -o artifacts/managed
+      - name: Test Workshop URL import and persistence
+        run: dotnet run --project tests/WorkshopLinkTests/WorkshopLinkTests.csproj -c Release
       - name: Verify assembly
         shell: bash
         run: |
