@@ -28,6 +28,32 @@ internal sealed partial class SteamConnection
 
     internal async Task<IReadOnlyList<PublishedFileDetails>> GetWorkshopSubscriptionsAsync()
     {
+        // GetUserFiles on current Steam accounts can reject every legacy
+        // "subscriptions"/"subscribed" query with InvalidParam. Allow an
+        // explicit set of Workshop links to bypass subscription discovery.
+        // These IDs are user-imported; never treat unrelated clipboard text
+        // or unverified details as a subscription.
+        var manuallyAddedIds = SteamWorkshopManualLinks.ReadIds();
+        if (manuallyAddedIds.Count > 0)
+        {
+            PatchHelper.Log($"[Workshop] Using {manuallyAddedIds.Count} manually added Workshop links.");
+            var manualDetails = await GetWorkshopDetailsAsync(manuallyAddedIds).ConfigureAwait(false);
+            var validDetails = manualDetails
+                .Where(detail =>
+                    detail.publishedfileid != 0
+                    && (detail.consumer_appid == 0 || detail.consumer_appid == SteamGameApp.AppId)
+                )
+                .ToArray();
+            if (validDetails.Length == 0)
+                throw new InvalidOperationException(
+                    "Copied Workshop links were saved, but Steam returned no usable mod details. Check that the links belong to Slay the Spire 2."
+                );
+
+            LastWorkshopSubscriptionQueryType = "manual-workshop-links";
+            LastWorkshopSubscriptionQueryAttempts = $"manual-workshop-links:{validDetails.Length}";
+            return validDetails;
+        }
+
         Exception lastFailure = null;
         var attempts = new List<string>();
         foreach (var query in WorkshopSubscriptionQueries)
