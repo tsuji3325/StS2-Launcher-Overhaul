@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using STS2Mobile.Steam;
 using STS2Mobile.Launcher.Components;
 
 namespace STS2Mobile.Launcher.Sections;
@@ -99,6 +100,24 @@ internal sealed partial class ActionSection
         workshopSyncButton.AccessibilityName = "Update Workshop mods";
         LauncherButtonStyles.ApplyPrimaryAction(workshopSyncButton, scale);
         SetCompactActionButtonText(workshopSyncButton, workshopSyncButton.Text);
+
+        Button importLinkButton = null;
+        importLinkButton = AddActionButton(
+            actionsParent,
+            "コピーしたWorkshopリンクを追加",
+            scale,
+            () =>
+            {
+                var imported = SteamWorkshopManualLinks.TryAddFromClipboard(out var message);
+                importLinkButton.Text = message;
+                if (imported)
+                    WorkshopSyncPressed?.Invoke();
+            }
+        );
+        importLinkButton.Name = "ImportWorkshopLinkFromClipboard";
+        importLinkButton.TooltipText = "Steam WorkshopのMOD詳細ページのURLをコピーしてから押してください。";
+        LauncherButtonStyles.ApplySupportAction(importLinkButton, scale);
+        SetCompactActionButtonText(importLinkButton, importLinkButton.Text);
 
         var workshopClearButton = AddActionButton(
             actionsParent,
