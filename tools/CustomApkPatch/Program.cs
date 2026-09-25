@@ -108,8 +108,9 @@ var translations = new Dictionary<string, string>(StringComparer.Ordinal)
         "選択中バージョンのゲームファイルだけを再取得します。セーブや他のバージョンは残ります。",
 };
 
+var inputDirectory = Path.GetDirectoryName(Path.GetFullPath(input))!;
 var resolver = new DefaultAssemblyResolver();
-resolver.AddSearchDirectory(Path.GetDirectoryName(Path.GetFullPath(input))!);
+resolver.AddSearchDirectory(inputDirectory);
 
 using var assembly = AssemblyDefinition.ReadAssembly(input, new ReaderParameters
 {
@@ -117,6 +118,25 @@ using var assembly = AssemblyDefinition.ReadAssembly(input, new ReaderParameters
     InMemory = true,
     AssemblyResolver = resolver,
 });
+
+var godotSharpPath = Path.Combine(inputDirectory, "GodotSharp.dll");
+if (!File.Exists(godotSharpPath))
+    throw new FileNotFoundException("GodotSharp.dll was not found beside STS2Mobile.dll.", godotSharpPath);
+
+using var godotSharp = AssemblyDefinition.ReadAssembly(godotSharpPath, new ReaderParameters
+{
+    ReadWrite = false,
+    InMemory = true,
+    AssemblyResolver = resolver,
+});
+
+var inputType = godotSharp.MainModule.Types.FirstOrDefault(t => t.FullName == "Godot.Input")
+    ?? throw new InvalidOperationException("Godot.Input type was not found in GodotSharp.dll.");
+var emulateMouseSetter = inputType.Methods.FirstOrDefault(m =>
+    m.Name == "set_EmulateMouseFromTouch"
+    && m.Parameters.Count == 1
+    && m.Parameters[0].ParameterType.MetadataType == MetadataType.Boolean
+) ?? throw new InvalidOperationException("Godot.Input.EmulateMouseFromTouch setter was not found.");
 
 var translated = 0;
 MethodReference? maxFpsSetter = null;
@@ -189,6 +209,8 @@ if (!vsyncPatched)
 
 var il = settingsPostfix.Body.GetILProcessor();
 var first = settingsPostfix.Body.Instructions[0];
+il.InsertBefore(first, il.Create(OpCodes.Ldc_I4_1));
+il.InsertBefore(first, il.Create(OpCodes.Call, assembly.MainModule.ImportReference(emulateMouseSetter)));
 il.InsertBefore(first, il.Create(OpCodes.Ldc_I4, 30));
 il.InsertBefore(first, il.Create(OpCodes.Call, assembly.MainModule.ImportReference(maxFpsSetter)));
 
@@ -196,6 +218,7 @@ Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
 assembly.Write(output);
 
 Console.WriteLine($"Translated string literals: {translated}");
+Console.WriteLine("Forced touch-to-mouse emulation for Android gameplay UI.");
 Console.WriteLine("Injected Android launcher/game 30 FPS cap.");
 Console.WriteLine("Changed first-launch mobile VSync default to Off.");
 return 0;
