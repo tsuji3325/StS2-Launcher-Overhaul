@@ -8,7 +8,7 @@ internal static partial class LauncherPreferences
 
     internal static string ReadPerformanceMode()
         => LauncherPerformanceMode.Normalize(
-            PerformanceModePreference.ReadText(LauncherPerformanceMode.Standard)
+            PerformanceModePreference.ReadText(LauncherPerformanceMode.Low)
         );
 
     internal static void SavePerformanceMode(string mode)
