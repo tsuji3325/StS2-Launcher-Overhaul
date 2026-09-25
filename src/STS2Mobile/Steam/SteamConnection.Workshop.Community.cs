@@ -116,6 +116,26 @@ internal sealed partial class SteamConnection
         );
 
         using var response = await http.SendAsync(request).ConfigureAwait(false);
+        // The Android Java HTTP bridge can expose 302 responses directly.
+        // Never forward Steam authentication cookies to an unknown redirect
+        // host. Explain when Steam requires an interactive web login instead.
+        if ((int)response.StatusCode is >= 300 and < 400)
+        {
+            var redirect = response.Headers.Location;
+            var resolved = redirect is { IsAbsoluteUri: true }
+                ? redirect
+                : redirect is not null ? new Uri(request.RequestUri!, redirect) : null;
+            var destination = resolved is null
+                ? "<unknown>"
+                : resolved.GetLeftPart(UriPartial.Path); // Exclude query/tokens.
+            PatchHelper.Log($"[Workshop] Community requested a redirect to {destination}");
+            throw new InvalidOperationException(
+                "Steam Community returned a redirect rather than Workshop data. "
+                + "Use the launcher MOD screen's copied Workshop link button. "
+                + $"Redirect destination: {destination}"
+            );
+        }
+
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
     }
