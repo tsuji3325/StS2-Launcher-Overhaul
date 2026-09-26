@@ -1,0 +1,33 @@
+name: Export open Android APK signing tools
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [downfall-character-compat]
+    paths: [.github/workflows/export-android-tools.yml]
+
+jobs:
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Locate public Android build tools
+        id: sdk
+        shell: bash
+        run: |
+          set -eu
+          ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [ -z "$ROOT" ]; then echo "Missing SDK root"; exit 1; fi
+          TOOL_DIR="$(find "$ROOT/build-tools" -maxdepth 1 -mindepth 1 -type d | sort -V | tail -1)"
+          if [ -z "$TOOL_DIR" ] || [ ! -f "$TOOL_DIR/lib/apksigner.jar" ] || [ ! -x "$TOOL_DIR/zipalign" ]; then
+            echo "Missing signing tools in $TOOL_DIR"; exit 1
+          fi
+          mkdir -p public-tools
+          cp "$TOOL_DIR/lib/apksigner.jar" public-tools/apksigner.jar
+          cp "$TOOL_DIR/zipalign" public-tools/zipalign
+          chmod +x public-tools/zipalign
+          sha256sum public-tools/* | tee public-tools/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-android-build-tools
+          path: public-tools/
+          retention-days: 1
