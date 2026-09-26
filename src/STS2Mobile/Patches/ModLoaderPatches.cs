@@ -878,17 +878,31 @@ internal static partial class ModLoaderPatches
             if (!LauncherModSelectionState.IsModdedModeFor(selection))
                 return false;
 
-            var selected = LauncherModSelectionState.KnownMods(selection)
-                .Any(mod => mod.Enabled
-                    && !mod.IsUnsupported
-                    && string.Equals(mod.Id, "Downfall", StringComparison.Ordinal));
-            PatchHelper.Log($"[Mods] Experimental Downfall character hooks selected={selected}");
-            return selected;
+            // Workshop KnownMod.Id is a *numeric PublishedFileId*, not the
+            // actual mod manifest ID. Never test it against "Downfall".
+            // Resolve the already-staged manifest and dependency graph, just
+            // as the real launch readiness step does.
+            var resolution = LauncherModLaunchPlan.Resolve(selection);
+            if (!resolution.Success)
+            {
+                PatchHelper.Log(
+                    $"[Mods] Downfall character compatibility gated off: mod plan not ready ({resolution.Error?.Code})."
+                );
+                return false;
+            }
+
+            var enabled = resolution.Plan.EnabledMods.Any(mod =>
+                string.Equals(mod.ManifestId, "Downfall", StringComparison.OrdinalIgnoreCase));
+            PatchHelper.Log(
+                $"[Mods] Experimental Downfall character hooks enabled={enabled}; "
+                + $"resolvedMods={resolution.Plan.EnabledMods.Length}"
+            );
+            return enabled;
         }
         catch (Exception ex)
         {
             PatchHelper.Log(
-                $"[Mods] Downfall selection could not be validated; preserving stable BaseLib behavior: {ex.GetType().Name}"
+                $"[Mods] Downfall selection could not be validated; preserving stable BaseLib behavior: {ex.GetType().Name}: {ex.Message}"
             );
             return false;
         }
