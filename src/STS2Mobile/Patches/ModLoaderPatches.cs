@@ -31,6 +31,19 @@ internal static partial class ModLoaderPatches
     private static readonly HashSet<string> AppliedModCompatibilityPatches = new(StringComparer.Ordinal);
     internal static IReadOnlyList<string> BaseLibAndroidSafeHarmonyPatchTypes { get; } =
         new[] { "BaseLib.Abstracts.CustomBadgesPatch" };
+
+    // The normal Android-safe initializer deliberately skips BaseLib PatchAll because
+    // some unrelated BaseLib Harmony patches hang on ARM64. Downfall needs just a
+    // small set of character hooks to show its custom characters. Keep this list
+    // explicit, run it only when Downfall is enabled, and NEVER use PatchAll here.
+    // This is an experimental visibility fix; character combat is not yet proven.
+    internal static IReadOnlyList<string> BaseLibDownfallCharacterPatchTypes { get; } =
+        new[]
+        {
+            "BaseLib.Patches.Content.PrefixIdPatch",
+            "BaseLib.Patches.Content.AddCustomCharacters",
+            "BaseLib.Patches.UI.ScrollCharSelectPatch",
+        };
     private static readonly object RegisteredGodotScriptAssembliesGate = new();
     private static readonly HashSet<string> RegisteredGodotScriptAssemblies = new(
         StringComparer.Ordinal
@@ -744,6 +757,15 @@ internal static partial class ModLoaderPatches
         var mainHarmony = ResolveBaseLibMainHarmony(baseLibMain);
         foreach (var patchType in BaseLibAndroidSafeHarmonyPatchTypes)
             TryInvokeBaseLibPatch(baseLibAssembly, patchType, mainHarmony);
+
+        // IMPORTANT: do not broaden the stable BaseLib-only path. In addition
+        // to preserving the observed no-freeze baseline, this means unrelated
+        // mods cannot accidentally receive experimental Downfall patches.
+        if (IsDownfallSelectedForCurrentLaunch())
+        {
+            foreach (var patchType in BaseLibDownfallCharacterPatchTypes)
+                TryApplyBaseLibHarmonyClass(baseLibAssembly, patchType, mainHarmony);
+        }
         PatchHelper.Log(
             "[Mods] BaseLib Android-safe initializer skipped "
                 + "BaseLib.Patches.Content.TheBigPatchToCardPileCmdAdd.Patch; "
@@ -841,6 +863,63 @@ internal static partial class ModLoaderPatches
         {
             PatchHelper.Log(
                 $"[Mods] BaseLib Android-safe initializer skipped {typeName}.{methodName}: {ex.Message}"
+            );
+        }
+    }
+
+    // Resolve the selection before BaseLib.Initialize. Workshop selections use
+    // opaque keys, so inspecting their key text for "Downfall" is incorrect.
+    // Never enable this experiment in Vanilla or BaseLib-only launches.
+    private static bool IsDownfallSelectedForCurrentLaunch()
+    {
+        try
+        {
+            var selection = LauncherModSelectionState.Load();
+            if (!LauncherModSelectionState.IsModdedModeFor(selection))
+                return false;
+
+            var selected = LauncherModSelectionState.KnownMods(selection)
+                .Any(mod => mod.Enabled
+                    && !mod.IsUnsupported
+                    && string.Equals(mod.Id, "Downfall", StringComparison.Ordinal));
+            PatchHelper.Log($"[Mods] Experimental Downfall character hooks selected={selected}");
+            return selected;
+        }
+        catch (Exception ex)
+        {
+            PatchHelper.Log(
+                $"[Mods] Downfall selection could not be validated; preserving stable BaseLib behavior: {ex.GetType().Name}"
+            );
+            return false;
+        }
+    }
+
+    private static void TryApplyBaseLibHarmonyClass(
+        Assembly baseLibAssembly,
+        string typeName,
+        Harmony harmony
+    )
+    {
+        try
+        {
+            var patchType = baseLibAssembly.GetType(typeName, throwOnError: false);
+            if (patchType == null)
+            {
+                PatchHelper.Log($"[Mods] Downfall character hook unavailable in installed BaseLib: {typeName}");
+                return;
+            }
+
+            // Harmony's class processor applies only the declared hooks on this
+            // one type; BaseLib's dangerous full-assembly TryPatchAll stays off.
+            var patched = harmony.CreateClassProcessor(patchType).Patch();
+            PatchHelper.Log(
+                $"[Mods] Downfall character hook {typeName}: installed={patched?.Count ?? 0}"
+            );
+        }
+        catch (Exception ex)
+        {
+            PatchHelper.Log(
+                $"[Mods] Downfall character hook failed {typeName}: {ex.GetType().Name}: {ex.Message}"
             );
         }
     }
