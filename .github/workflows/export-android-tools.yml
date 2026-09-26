@@ -24,6 +24,9 @@ jobs:
           mkdir -p public-tools
           cp "$TOOL_DIR/lib/apksigner.jar" public-tools/apksigner.jar
           cp "$TOOL_DIR/zipalign" public-tools/zipalign
+          LIBCXX="$(find "$TOOL_DIR" "$ROOT" -type f -name "libc++.so" -print -quit 2>/dev/null)"
+          if [ -z "$LIBCXX" ]; then echo "Missing Linux libc++.so required by zipalign"; exit 1; fi
+          cp "$LIBCXX" public-tools/libc++.so
           chmod +x public-tools/zipalign
           sha256sum public-tools/* | tee public-tools/SHA256SUMS
       - uses: actions/upload-artifact@v4
