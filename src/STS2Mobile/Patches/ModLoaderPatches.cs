@@ -42,6 +42,12 @@ internal static partial class ModLoaderPatches
         {
             "BaseLib.Patches.Content.PrefixIdPatch",
             "BaseLib.Patches.Content.AddCustomCharacters",
+            // Without these model getter overrides the game looks for made-up
+            // vanilla images/packed/character_select/char_select_<mod>.png.
+            // Downfall stores icons and scene backgrounds under res://<ModId>/.
+            "BaseLib.Abstracts.CharacterSelectIconPath",
+            "BaseLib.Abstracts.CharacterSelectLockedIconPath",
+            "BaseLib.Abstracts.CustomCharacterSelectBg",
             "BaseLib.Patches.UI.ScrollCharSelectPatch",
         };
     private static readonly object RegisteredGodotScriptAssembliesGate = new();
