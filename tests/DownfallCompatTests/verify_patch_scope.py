@@ -19,11 +19,13 @@ expected = [
 ]
 assert hooks == expected, f"Unexpected patch scope: {hooks}"
 assert "IsDownfallSelectedForCurrentLaunch()" in src
-assert 'string.Equals(mod.Id, "Downfall", StringComparison.Ordinal)' in src
+assert 'LauncherModLaunchPlan.Resolve(selection)' in src
+assert 'string.Equals(mod.ManifestId, "Downfall", StringComparison.OrdinalIgnoreCase)' in src
+assert 'string.Equals(mod.Id, "Downfall"' not in src
 assert "LauncherModSelectionState.IsModdedModeFor(selection)" in src
 assert "harmony.CreateClassProcessor(patchType).Patch()" in src
 assert "foreach (var patchType in BaseLibDownfallCharacterPatchTypes)" in src
 assert "BaseLib.Patches.Content.TheBigPatchToCardPileCmdAdd.Patch" in src
 assert "BaseLib Android-safe initializer skipped BaseLib PatchAll" in src
 assert "MainHarmony.TryPatchAll(assembly);" not in src, "Unsafe full BaseLib patching re-enabled"
-print("PASS: 10 Downfall whitelist/gating source checks")
+print("PASS: 12 Downfall whitelist/gating source checks")
