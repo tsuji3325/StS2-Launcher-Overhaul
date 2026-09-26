@@ -48,7 +48,13 @@ internal static partial class ModLoaderPatches
             "BaseLib.Abstracts.CharacterSelectIconPath",
             "BaseLib.Abstracts.CharacterSelectLockedIconPath",
             "BaseLib.Abstracts.CustomCharacterSelectBg",
-            "BaseLib.Patches.UI.ScrollCharSelectPatch",
+            // Do not enable BaseLib.Patches.UI.ScrollCharSelectPatch on Android.
+            // v3 confirmed that all seven Downfall select icons resolve, but
+            // crashed immediately after BaseLib replaced the selection control
+            // with its mod-owned NHorizontalScrollContainer script. Keep the
+            // ordinary layout for this diagnostic build; scrolling needs an
+            // Android-safe built-in-control implementation if this boots.
+
         };
     private static readonly object RegisteredGodotScriptAssembliesGate = new();
     private static readonly HashSet<string> RegisteredGodotScriptAssemblies = new(
