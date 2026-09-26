@@ -1,12 +1,13 @@
-name: Compile JP Workshop fix
+name: Compile JP Downfall character compatibility
 
 on:
   push:
     branches:
-      - workshop-link-fallback
+      - downfall-character-compat
     paths:
       - "src/STS2Mobile/**"
       - "tests/WorkshopLinkTests/**"
+      - "tests/DownfallCompatTests/**"
       - ".github/workflows/compile-jp-workshop.yml"
   workflow_dispatch:
 
@@ -38,6 +39,8 @@ jobs:
         run: dotnet publish src/STS2Mobile/STS2Mobile.csproj -c Release --no-self-contained -o artifacts/managed
       - name: Test Workshop URL import and persistence
         run: dotnet run --project tests/WorkshopLinkTests/WorkshopLinkTests.csproj -c Release
+      - name: Verify Downfall patch safety scope
+        run: python3 tests/DownfallCompatTests/verify_patch_scope.py
       - name: Verify assembly
         shell: bash
         run: |
