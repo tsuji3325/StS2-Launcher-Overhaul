@@ -49,3 +49,21 @@ always false for the user's Workshop installation. The current revision uses
 `ManifestId` instead. A regression source test asserts that the erroneous
 numeric-ID comparison is not reintroduced. This fixes the gate, but actual
 character registration and Downfall run compatibility remain device tests.
+
+## v3 actual device evidence (2026-09-27 JST)
+- With BaseLib+Downfall, all eight mod character select assets were logged as loading:
+  `res://Automaton/images/character/char_select.png`,
+  `res://Awakened/...`, `Champ`, `Guardian`, `Hermit`,
+  `Hexaghost`, `SlimeBoss`, and `Snecko` (the original log lists eight names;
+  preserve the log as the authority).
+- Immediately before main-menu startup completed, BaseLib logged
+  `More than 8 selection options, enabling character select scroll` and loaded
+  `res://BaseLibScenes/NHorizontalScrollContainer.cs`. Process exited via native
+  signal 6 soon afterward; logs do not prove this script caused the signal.
+- v4 diagnostic: remove only `ScrollCharSelectPatch` from the Downfall-specific
+  whitelist. Retain PrefixIdPatch, AddCustomCharacters, and the three model
+  icon/background path getter patches. If v4 runs, implement scrolling using
+  Android-safe built-in Godot controls and test in isolation.
+- Without scroll the extended character row might not fit on a phone screen.
+  Check whether game can open character selection without crashing first.
+- Do not delete game files, re-download them, clear app data, or reinstall.
