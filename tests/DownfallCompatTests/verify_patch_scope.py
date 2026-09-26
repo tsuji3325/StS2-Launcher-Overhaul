@@ -18,8 +18,8 @@ expected = [
     "BaseLib.Abstracts.CharacterSelectIconPath",
     "BaseLib.Abstracts.CharacterSelectLockedIconPath",
     "BaseLib.Abstracts.CustomCharacterSelectBg",
-    "BaseLib.Patches.UI.ScrollCharSelectPatch",
 ]
+assert "BaseLib.Patches.UI.ScrollCharSelectPatch" not in hooks
 assert hooks == expected, f"Unexpected patch scope: {hooks}"
 assert "IsDownfallSelectedForCurrentLaunch()" in src
 assert 'LauncherModLaunchPlan.Resolve(selection)' in src
