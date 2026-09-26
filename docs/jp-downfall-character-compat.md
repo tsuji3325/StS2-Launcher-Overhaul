@@ -39,3 +39,13 @@ Managed assembly compilation and the existing Workshop import test plus
 source-level allowlist/gating checks pass in GitHub Actions. Physical Android
 visibility, Downfall game startup and combat remain **unverified**.
 No signing credentials or personal data are stored in the repository.
+
+## Fix after first in-place test (Workshop identity mismatch)
+The first phone test still booted but did not show custom characters. Source audit
+found that the opt-in gate compared `LauncherKnownMod.Id` against `Downfall`.
+Workshop `Id` is actually a numeric Steam PublishedFileId, so that gate was
+always false for the user's Workshop installation. The current revision uses
+`LauncherModLaunchPlan.Resolve(selection)` and checks the resolved manifest's
+`ManifestId` instead. A regression source test asserts that the erroneous
+numeric-ID comparison is not reintroduced. This fixes the gate, but actual
+character registration and Downfall run compatibility remain device tests.
