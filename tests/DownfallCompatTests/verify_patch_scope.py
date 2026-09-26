@@ -15,6 +15,9 @@ hooks = re.findall(r'"([^"]+)"', match.group("items"))
 expected = [
     "BaseLib.Patches.Content.PrefixIdPatch",
     "BaseLib.Patches.Content.AddCustomCharacters",
+    "BaseLib.Abstracts.CharacterSelectIconPath",
+    "BaseLib.Abstracts.CharacterSelectLockedIconPath",
+    "BaseLib.Abstracts.CustomCharacterSelectBg",
     "BaseLib.Patches.UI.ScrollCharSelectPatch",
 ]
 assert hooks == expected, f"Unexpected patch scope: {hooks}"
@@ -28,4 +31,4 @@ assert "foreach (var patchType in BaseLibDownfallCharacterPatchTypes)" in src
 assert "BaseLib.Patches.Content.TheBigPatchToCardPileCmdAdd.Patch" in src
 assert "BaseLib Android-safe initializer skipped BaseLib PatchAll" in src
 assert "MainHarmony.TryPatchAll(assembly);" not in src, "Unsafe full BaseLib patching re-enabled"
-print("PASS: 12 Downfall whitelist/gating source checks")
+print("PASS: 13 Downfall whitelist/gating source checks")
